@@ -1,0 +1,58 @@
+# ============================================================================
+# SecureObs INTERNAL CANARY — reusable-workflow (`uses:`) path
+# ----------------------------------------------------------------------------
+# This is NOT a customer file. It exercises the integration path most customers
+# use: calling the PUBLIC reusable workflow published to the mirror
+# `secureobs/secureobs-integrations`. It catches regressions the direct-image
+# canary cannot — e.g. a broken `uses:` ref, an unpublished `v1` mirror tag, or
+# a backwards-incompatible change to the reusable workflow's input/secret
+# interface.
+#
+# DEPENDENCY / ASSUMPTION:
+#   Requires the public mirror tag to exist:
+#     secureobs/secureobs-integrations/.github/workflows/secureobs.yml@v1
+#   That tag is produced by `sync-integrations.yml` in the secure-obs repo on
+#   every `integrations-v*` release. If the mirror/tag is missing, THIS CANARY
+#   FAILS AT RESOLUTION — which is the intended signal.
+#
+# REQUIRED repository secrets:
+#   SECUREOBS_API_KEY     (secret)  Project-scoped ingestion key.
+#   SECUREOBS_PROJECT_ID  (secret)  Canary project GUID   <-- TODO: set this.
+#   SECUREOBS_TENANT_ID   (secret)  Canary tenant GUID    <-- TODO: set this.
+#
+# IMPORTANT secret-mapping caveat: the reusable workflow renames the key to
+# `api-key`. `secrets: inherit` does NOT populate it — you MUST map it explicitly
+# under `secrets:` as shown below, or the called workflow fails fast with a clear
+# "SECUREOBS_API_KEY is empty" error.
+#
+# The self-test runner correlates this path via the raw GitHub run id (the
+# reusable workflow tags findings with `github.run_id`), not a custom id.
+# ============================================================================
+name: SecureObs Canary (reusable workflow)
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Permissions are declared by the called workflow's jobs (e.g. pull-requests:
+# write for the PR comment). Nothing extra is needed at the caller level.
+permissions:
+  contents: read
+
+jobs:
+  secureobs:
+    name: SecureObs via public reusable workflow @v1
+    # Pin to the floating major tag so the canary tracks the latest v1.x mirror,
+    # exactly as the quickstart instructs customers to do. Pin to @v1.2.3 for a
+    # strict-reproducibility canary instead.
+    uses: secureobs/secureobs-integrations/.github/workflows/secureobs.yml@v1
+    with:
+      project-id: ${{ secrets.SECUREOBS_PROJECT_ID }}   # TODO: set repo secret
+      tenant-id: ${{ secrets.SECUREOBS_TENANT_ID }}     # TODO: set repo secret
+      image-tag: v1
+      fail-on-blocking: true
+    secrets:
+      # Explicit mapping is mandatory — `secrets: inherit` will NOT populate this.
+      api-key: ${{ secrets.SECUREOBS_API_KEY }}
