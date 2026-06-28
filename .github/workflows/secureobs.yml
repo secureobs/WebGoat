@@ -1,0 +1,14 @@
+name: SecureObs Security Scan
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  secureobs:
+    uses: secureobs/secureobs-integrations/.github/workflows/secureobs.yml@v1.2.14
+    with:
+      project-id: 'ec1a28cc-d0d5-4e69-a3df-8b7eec3779b2'
+      tenant-id: '1067c3cb-9e2a-4ebf-b5c1-a070439bd5a3'
+      image-tag: 'latest'
+    secrets:
+      api-key: ${{ secrets.SECUREOBS_API_KEY }}
